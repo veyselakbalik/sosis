@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Removes a leftover Sosis/EasyApp dashboard launchd agent from older installs.
+ * Removes a leftover local dashboard launchd agent from older Sosis installs.
  * Current Sosis is stdio MCP + CLI only; this does not touch ~/.sosis/.
  */
 import { unlink, access } from "node:fs/promises";

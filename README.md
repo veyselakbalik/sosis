@@ -82,7 +82,7 @@ The connected agent uses its own model to draft translations, release notes, and
 ### 1. Install
 
 ```bash
-git clone <your-repository-url> sosis
+git clone https://github.com/veyselakbalik/sosis.git sosis
 cd sosis
 npm install
 ```
