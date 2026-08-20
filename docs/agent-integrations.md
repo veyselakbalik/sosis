@@ -40,7 +40,17 @@ npm install
 npm run mcp:doctor
 ```
 
-Use the absolute repository path in every configuration. Sosis currently requires macOS because its local encryption master key is stored in the login Keychain.
+A first-time doctor run reports `FAIL  ASC accounts: none configured` until you create a Team API key in App Store Connect and add it:
+
+```bash
+npm run sosis -- accounts add \
+  --label "Main" \
+  --issuer-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+  --key-id "ABCDE12345" \
+  --p8 "$HOME/Downloads/AuthKey_ABCDE12345.p8"
+```
+
+See the README section **Create an App Store Connect API key** for the Apple UI steps. Use the absolute repository path in every MCP configuration. Sosis currently requires macOS because its local encryption master key is stored in the login Keychain.
 
 ## Codex
 

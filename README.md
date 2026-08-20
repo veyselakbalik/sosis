@@ -77,44 +77,66 @@ The connected agent uses its own model to draft translations, release notes, and
 
 - macOS
 - Node.js 20 or newer
-- An App Store Connect API key with permissions appropriate for the actions you want to perform
+- An App Store Connect API key (created in the next steps)
 
 ### 1. Install
 
 ```bash
-git clone https://github.com/veyselakbalik/sosis.git sosis
+git clone https://github.com/veyselakbalik/sosis.git
 cd sosis
 npm install
 ```
 
-### 2. Add an App Store Connect account
+`npm run mcp:doctor` at this point is expected to report `FAIL  ASC accounts: none configured`. That only means no key has been added yet.
+
+### 2. Create an App Store Connect API key
+
+Sosis talks to Apple with a **Team API key**. You need three values: **Issuer ID**, **Key ID**, and a **`.p8` private key file**.
+
+1. Sign in to [App Store Connect](https://appstoreconnect.apple.com).
+2. Open **Users and Access**.
+3. Open the **Integrations** tab, then **App Store Connect API**.
+4. If you have never used the API, Account Holder must click **Request Access** once.
+5. Stay on **Team Keys** and click **Generate API Key** (or **+**).
+6. Give the key a name you will recognize, such as `Sosis`.
+7. Set **Access** to **App Manager** or higher if you want Sosis to edit metadata, screenshots, TestFlight, or subscriptions. **Developer** is enough for read-only inventory.
+8. Generate the key, then **Download** the `.p8` file immediately. Apple will not let you download it again.
+9. Copy **Issuer ID** from the top of the API keys page. Copy **Key ID** from the key’s row. The filename is usually `AuthKey_<KEY_ID>.p8`.
+
+Keep the `.p8` file on your Mac, outside the git repository. Do not commit it, paste it into chat, or upload it to another service.
+
+Apple’s own guide: [Creating API keys for App Store Connect API](https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api).
+
+### 3. Add the key to Sosis
 
 ```bash
+cd sosis
+
 npm run sosis -- accounts add \
   --label "Main" \
   --issuer-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
   --key-id "ABCDE12345" \
-  --p8 ./AuthKey_ABCDE12345.p8
+  --p8 "$HOME/Downloads/AuthKey_ABCDE12345.p8"
 ```
 
-Sosis reads the `.p8` file from disk, encrypts it, and stores only public metadata in `~/.sosis/accounts.json`. It never prints the private key. Do not paste `.p8` contents into an agent chat.
+Sosis reads the file from disk, encrypts it into `~/.sosis/credentials/`, and stores only the public label / Issuer ID / Key ID in `~/.sosis/accounts.json`. It never prints the private key.
 
-List or remove local accounts the same way:
+List or remove local accounts later with:
 
 ```bash
 npm run sosis -- accounts list
 npm run sosis -- accounts remove --id <account-id> --yes
 ```
 
-### 3. Verify the local installation
+### 4. Verify the local installation
 
 ```bash
 npm run mcp:doctor
 ```
 
-The doctor checks Node.js, macOS Keychain access, encrypted credentials, local file permissions, the MCP SDK, and the bundled ASO skill index. It does not contact App Store Connect.
+All checks should now be `OK`, including `ASC accounts`. The doctor does not contact App Store Connect.
 
-### 4. Connect your agent
+### 5. Connect your agent
 
 The easiest setup is to open the cloned Sosis repository in Codex, Claude Code, or Cursor and paste this message:
 
