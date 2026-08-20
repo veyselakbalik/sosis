@@ -15,12 +15,13 @@ Never include any of the following in issues, pull requests, logs, or screenshot
 
 `.p8` files, `.env*`, and local data directories are gitignored. If you accidentally commit a secret, rotate the App Store Connect key immediately. Rewriting git history is not enough once a public clone exists.
 
+Add keys with the CLI or with `add_account` plus a filesystem path. Do not paste private-key contents into chat, tool arguments, or issues.
+
 ## Threat model
 
 Sosis is local single-user software:
 
-- The MCP server uses stdio. It is not a hosted MCP endpoint.
-- The optional dashboard is intended to bind to `127.0.0.1`.
+- The MCP server uses stdio. It is not a hosted MCP or HTTP endpoint.
 - `.p8` contents are encrypted at rest under `~/.sosis/credentials/`.
 - The encryption master key lives in the macOS login Keychain.
 
@@ -28,6 +29,6 @@ This protects credentials at rest and avoids a remote Sosis service as a breach 
 
 ## Reporting a vulnerability
 
-Use a [GitHub security advisory](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/about-repository-security-advisories) for credential handling, write-confirmation bypasses, restore/backup integrity, or localhost-binding issues.
+Use a [GitHub security advisory](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/about-repository-security-advisories) for credential handling, write-confirmation bypasses, or restore/backup integrity.
 
 Do not file a public issue for those classes of bug.

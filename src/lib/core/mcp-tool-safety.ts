@@ -1,5 +1,10 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
+export const LOCAL_WRITE_TOOLS = new Set([
+  "add_account",
+  "remove_account",
+]);
+
 export const EXTERNAL_WRITE_TOOLS = new Set([
   "apply_localization_plan",
   "apply_localization_batch",
@@ -35,7 +40,10 @@ const CONDITIONALLY_READ_ONLY = new Set([
   "manage_phased_release",
 ]);
 
+const WRITE_TOOLS = new Set([...EXTERNAL_WRITE_TOOLS, ...LOCAL_WRITE_TOOLS]);
+
 const DESTRUCTIVE_TOOLS = new Set([
+  "remove_account",
   "restore_localization_snapshot",
   "restore_change_snapshot",
   "submit_version_for_review",
@@ -49,6 +57,7 @@ const DESTRUCTIVE_TOOLS = new Set([
 ]);
 
 const CONFIRMATION_HINTS: Record<string, string> = {
+  remove_account: "REMOVE ACCOUNT <accountId>",
   reply_review: "REPLY <reviewId>",
   submit_version_for_review: "SUBMIT <versionId>",
   release_version_now: "RELEASE <versionId>",
@@ -72,6 +81,7 @@ export function expectedHighImpactConfirmation(
   args: Record<string, unknown>,
 ): string | null {
   switch (name) {
+    case "remove_account": return `REMOVE ACCOUNT ${String(args.accountId)}`;
     case "reply_review": return `REPLY ${String(args.reviewId)}`;
     case "submit_version_for_review": return `SUBMIT ${String(args.versionId)}`;
     case "release_version_now": return `RELEASE ${String(args.versionId)}`;
@@ -96,7 +106,7 @@ export function expectedHighImpactConfirmation(
 }
 
 export function assertToolConfirmation(name: string, args: Record<string, unknown>): void {
-  if (!EXTERNAL_WRITE_TOOLS.has(name) || hasSafeConditionalMode(name, args)) return;
+  if (!WRITE_TOOLS.has(name) || hasSafeConditionalMode(name, args)) return;
   if (args.confirmed !== true) {
     throw new Error(
       `CONFIRMATION_REQUIRED:${name}: Set confirmed=true only after the user reviews the exact account, resources, and effect.`,
@@ -117,7 +127,8 @@ export function configureMcpToolSafety(tools: Tool[]): void {
     const isReadOnly = /^(list|get|validate)_/.test(tool.name)
       || isLocalAsoSkillRead
       || tool.name === "plan_screenshot_upload";
-    const isExternalWrite = EXTERNAL_WRITE_TOOLS.has(tool.name);
+    const isWrite = WRITE_TOOLS.has(tool.name);
+    const isLocalWrite = LOCAL_WRITE_TOOLS.has(tool.name);
     tool.annotations = {
       ...tool.annotations,
       title: tool.annotations?.title ?? tool.name.replaceAll("_", " "),
@@ -125,18 +136,21 @@ export function configureMcpToolSafety(tools: Tool[]): void {
       destructiveHint: DESTRUCTIVE_TOOLS.has(tool.name),
       idempotentHint: tool.annotations?.idempotentHint ?? isReadOnly,
       openWorldHint: !isLocalAsoSkillRead
+        && !isLocalWrite
         && tool.name !== "list_accounts"
         && tool.name !== "list_change_snapshots"
         && tool.name !== "validate_localization_payload",
     };
 
-    if (!isExternalWrite) continue;
+    if (!isWrite) continue;
     const schema = tool.inputSchema as MutableInputSchema;
     schema.properties ??= {};
     schema.properties.confirmed = {
       type: "boolean",
       const: true,
-      description: "Set true only after the user has reviewed the exact target and effect of this ASC write.",
+      description: isLocalWrite
+        ? "Set true only after the user has reviewed this local credential change. Never paste .p8 contents into chat."
+        : "Set true only after the user has reviewed the exact target and effect of this ASC write.",
     };
     if (!CONDITIONALLY_READ_ONLY.has(tool.name)) {
       schema.required = [...new Set([...(schema.required ?? []), "confirmed"])];

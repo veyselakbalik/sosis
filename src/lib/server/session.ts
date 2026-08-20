@@ -1,5 +1,5 @@
 /**
- * Local account service shared by the optional web app and the MCP process.
+ * Local account service shared by the CLI and the MCP process.
  *
  * Public account metadata lives in `~/.sosis/accounts.json`; private `.p8`
  * values live in AES-GCM envelopes whose master key is in macOS Keychain.

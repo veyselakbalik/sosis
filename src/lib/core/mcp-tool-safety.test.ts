@@ -19,6 +19,35 @@ test("requires reviewed confirmation for external writes", () => {
   assert.doesNotThrow(() => assertToolConfirmation("list_apps", {}));
 });
 
+test("requires confirmation for local account changes and a phrase to delete one", () => {
+  assert.throws(() => assertToolConfirmation("add_account", {
+    label: "Main",
+    issuerId: "12345678-1234-4234-8234-1234567890ab",
+    keyId: "ABCD1234",
+    p8Path: "/tmp/AuthKey.p8",
+  }), /CONFIRMATION_REQUIRED/);
+  assert.doesNotThrow(() => assertToolConfirmation("add_account", {
+    label: "Main",
+    issuerId: "12345678-1234-4234-8234-1234567890ab",
+    keyId: "ABCD1234",
+    p8Path: "/tmp/AuthKey.p8",
+    confirmed: true,
+  }));
+  assert.equal(
+    expectedHighImpactConfirmation("remove_account", { accountId: "account-1" }),
+    "REMOVE ACCOUNT account-1",
+  );
+  assert.throws(() => assertToolConfirmation("remove_account", {
+    accountId: "account-1",
+    confirmed: true,
+  }), /EXACT_CONFIRMATION_REQUIRED/);
+  assert.doesNotThrow(() => assertToolConfirmation("remove_account", {
+    accountId: "account-1",
+    confirmed: true,
+    confirmation: "REMOVE ACCOUNT account-1",
+  }));
+});
+
 test("requires resource-bound phrases for high-impact writes", () => {
   const args = { reviewId: "review-1", confirmed: true };
   assert.equal(expectedHighImpactConfirmation("reply_review", args), "REPLY review-1");

@@ -1,6 +1,6 @@
 # Agent integrations
 
-Sosis is a local stdio MCP server. The agent host starts it as a child process, communicates over stdin/stdout, and uses its own model for translations and copy. The optional Next.js dashboard does not need to be running.
+Sosis is a local stdio MCP server. The agent host starts it as a child process, communicates over stdin/stdout, and uses its own model for translations and copy. There is no HTTP server.
 
 ## Let your agent configure Sosis
 
@@ -21,11 +21,13 @@ duplicate. Install npm dependencies only if they are missing. Run
 `npm run mcp:doctor`, verify that the MCP entry is enabled, then start a real
 stdio MCP client and test `list_accounts` and `list_apps` as read-only calls.
 
-Do not create a remote MCP server. Do not expose or print .p8 contents,
+Do not create a remote MCP server. Do not read, expose, or print .p8 contents,
 Keychain values, JWTs, or other secrets. Do not change App Store Connect data.
-Request any system/configuration approval required by the client. When finished,
-tell me exactly what was configured, what checks passed, and whether I need to
-restart the client or open a new task before Sosis tools appear.
+If no local account exists, tell me the exact `npm run sosis -- accounts add`
+command to run; do not add the key yourself. Request any system/configuration
+approval required by the client. When finished, tell me exactly what was
+configured, what checks passed, and whether I need to restart the client or
+open a new task before Sosis tools appear.
 ```
 
 The prompt permits local client configuration and read-only verification only. It does not authorize ASC writes.

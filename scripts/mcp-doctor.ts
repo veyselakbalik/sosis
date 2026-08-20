@@ -65,7 +65,9 @@ async function main(): Promise<void> {
   checks.push({
     label: "ASC accounts",
     ok: accounts.length > 0,
-    detail: accounts.length > 0 ? `${accounts.length} configured` : "none configured; add one in the visual dashboard",
+    detail: accounts.length > 0
+      ? `${accounts.length} configured`
+      : "none configured; run npm run sosis -- accounts add --label NAME --issuer-id UUID --key-id KEY --p8 ./AuthKey.p8",
   });
 
   for (const account of accounts) {

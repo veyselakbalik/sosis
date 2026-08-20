@@ -4,7 +4,7 @@
  * (Claude Desktop, Claude Code, Cursor, …) via the Model Context Protocol.
  *
  * Runs locally over stdio. Core ASC, account and upload tools access shared
- * local modules directly; the optional visual web app does not need to run.
+ * local modules directly. There is no HTTP server.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -20,7 +20,9 @@ import {
   sosisAscPatch,
   sosisAscPost,
   sosisAscDelete,
+  sosisAddAccount,
   sosisListAccounts,
+  sosisRemoveAccount,
   sosisUploadAppScreenshot,
   sosisUploadAppPreview,
 } from "./sosis-client.js";
@@ -104,6 +106,31 @@ const tools: Tool[] = [
     name: "list_accounts",
     description: "List all App Store Connect accounts saved in the local Sosis store. Returns public labels and IDs; credentials are never exposed.",
     inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "add_account",
+    description: "Add a local App Store Connect API key from a .p8 file path. Do not read or print the private key; pass the filesystem path and let Sosis encrypt it. Returns public label and IDs only. Prefer the CLI for this: npm run sosis -- accounts add ...",
+    inputSchema: {
+      type: "object",
+      properties: {
+        label: { type: "string", minLength: 1, maxLength: 80, description: "Local label for this key." },
+        issuerId: { type: "string", description: "App Store Connect Issuer ID (UUID)." },
+        keyId: { type: "string", description: "App Store Connect Key ID." },
+        p8Path: { type: "string", minLength: 1, description: "Absolute or repo-relative path to the .p8 file. Do not pass the file contents." },
+      },
+      required: ["label", "issuerId", "keyId", "p8Path"],
+    },
+  },
+  {
+    name: "remove_account",
+    description: "Delete a local Sosis account and its encrypted .p8 envelope. Does not change App Store Connect. Requires confirmed=true and confirmation='REMOVE ACCOUNT <accountId>'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        accountId: { type: "string", minLength: 1, description: "Local Sosis account id from list_accounts." },
+      },
+      required: ["accountId"],
+    },
   },
   {
     name: "list_apps",
@@ -1082,6 +1109,21 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<str
 
     case "list_accounts": {
       return asJsonText(await sosisListAccounts());
+    }
+
+    case "add_account": {
+      const account = await sosisAddAccount({
+        label: String(args.label ?? ""),
+        issuerId: String(args.issuerId ?? ""),
+        keyId: String(args.keyId ?? ""),
+        p8Path: String(args.p8Path ?? ""),
+      });
+      return asJsonText({ account });
+    }
+
+    case "remove_account": {
+      const account = await sosisRemoveAccount(String(args.accountId ?? ""));
+      return asJsonText({ removed: account });
     }
 
     case "list_apps": {

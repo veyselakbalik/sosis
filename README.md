@@ -9,9 +9,9 @@
 
 Sosis lets Codex, Claude Code, Cursor, and other MCP-compatible agents inspect and manage App Store Connect through typed local tools.
 
-The MCP server is the product. The web app is an optional visual dashboard for adding accounts, inspecting App Store state, reviewing change history, and restoring backups.
+There is no web app and no hosted Sosis service. The product is a local stdio MCP server plus a small CLI for adding API keys.
 
-**No hosted Sosis service. No Sosis AI API key. No credentials sent to the browser.**
+**No Sosis AI API key. No `.p8` contents in chat, logs, or tool results.**
 
 ---
 
@@ -50,7 +50,6 @@ The connected agent uses its own model to draft translations, release notes, and
 - Upload screenshot directories using locale/display folder conventions.
 - Back up screenshots and localizations before deletion, then restore them later.
 - Manage builds, review submission, release, phased release, subscriptions, and TestFlight operations with explicit write confirmation.
-- Show recent changes and deletion backups in the optional local dashboard.
 
 ## Architecture
 
@@ -61,18 +60,16 @@ The connected agent uses its own model to draft translations, release notes, and
                        │ local stdio
                        ▼
                 ┌─────────────┐
-                │  Sosis MCP  │  ← primary interface
+                │  Sosis MCP  │
                 └──────┬──────┘
                        │
              ┌─────────▼─────────┐
-             │ shared safe core  │◀──── optional web dashboard
+             │ shared safe core  │◀──── CLI (account add/remove)
              └─────────┬─────────┘
                        │ signed HTTPS requests
                        ▼
               App Store Connect API
 ```
-
-MCP calls App Store Connect directly through the shared core. The Next.js server does **not** need to be running while an agent uses MCP.
 
 ## Quick start
 
@@ -82,7 +79,42 @@ MCP calls App Store Connect directly through the shared core. The Next.js server
 - Node.js 20 or newer
 - An App Store Connect API key with permissions appropriate for the actions you want to perform
 
-### Ask your agent to add Sosis MCP
+### 1. Install
+
+```bash
+git clone <your-repository-url> sosis
+cd sosis
+npm install
+```
+
+### 2. Add an App Store Connect account
+
+```bash
+npm run sosis -- accounts add \
+  --label "Main" \
+  --issuer-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+  --key-id "ABCDE12345" \
+  --p8 ./AuthKey_ABCDE12345.p8
+```
+
+Sosis reads the `.p8` file from disk, encrypts it, and stores only public metadata in `~/.sosis/accounts.json`. It never prints the private key. Do not paste `.p8` contents into an agent chat.
+
+List or remove local accounts the same way:
+
+```bash
+npm run sosis -- accounts list
+npm run sosis -- accounts remove --id <account-id> --yes
+```
+
+### 3. Verify the local installation
+
+```bash
+npm run mcp:doctor
+```
+
+The doctor checks Node.js, macOS Keychain access, encrypted credentials, local file permissions, the MCP SDK, and the bundled ASO skill index. It does not contact App Store Connect.
+
+### 4. Connect your agent
 
 The easiest setup is to open the cloned Sosis repository in Codex, Claude Code, or Cursor and paste this message:
 
@@ -101,49 +133,16 @@ duplicate. Install npm dependencies only if they are missing. Run
 `npm run mcp:doctor`, verify that the MCP entry is enabled, then start a real
 stdio MCP client and test `list_accounts` and `list_apps` as read-only calls.
 
-Do not create a remote MCP server. Do not expose or print .p8 contents,
+Do not create a remote MCP server. Do not read, expose, or print .p8 contents,
 Keychain values, JWTs, or other secrets. Do not change App Store Connect data.
-Request any system/configuration approval required by the client. When finished,
-tell me exactly what was configured, what checks passed, and whether I need to
-restart the client or open a new task before Sosis tools appear.
+If no local account exists, tell me the exact `npm run sosis -- accounts add`
+command to run; do not add the key yourself. Request any system/configuration
+approval required by the client. When finished, tell me exactly what was
+configured, what checks passed, and whether I need to restart the client or
+open a new task before Sosis tools appear.
 ```
 
-That prompt authorizes the agent to configure the local MCP connection, but not to make App Store Connect changes. Most clients need a restart or a new task before a newly added MCP server appears in the tool list.
-
-### 1. Install
-
-```bash
-git clone <your-repository-url> sosis
-cd sosis
-npm install
-```
-
-### 2. Add an App Store Connect account
-
-Start the local visual dashboard:
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000/accounts](http://localhost:3000/accounts) and enter:
-
-- a local account label;
-- Issuer ID;
-- Key ID;
-- the contents of the `.p8` private key.
-
-The `.p8` value is encrypted immediately and never returned to the browser or an MCP client.
-
-### 3. Verify the local installation
-
-```bash
-npm run mcp:doctor
-```
-
-The doctor checks Node.js, macOS Keychain access, encrypted credentials, local file permissions, the MCP SDK, and the bundled ASO skill index. It does not contact App Store Connect.
-
-### 4. Connect your agent
+That prompt authorizes the agent to configure the local MCP connection, but not to make App Store Connect changes or ingest a private key.
 
 #### Codex
 
@@ -151,8 +150,6 @@ The doctor checks Node.js, macOS Keychain access, encrypted credentials, local f
 codex mcp add sosis -- npm --prefix "/absolute/path/to/sosis" run mcp
 codex mcp get sosis
 ```
-
-Start a new Codex task or restart the desktop client after adding the server. Codex starts the stdio process automatically when it needs Sosis; there is no MCP daemon to keep running manually.
 
 #### Claude Code
 
@@ -211,16 +208,6 @@ Sosis includes a pinned copy of the MIT-licensed [Eronred/aso-skills](https://gi
 - `search_aso_skills` — route a natural-language request to the best skill;
 - `get_aso_skill` — load the selected methodology with Sosis safety rules.
 
-Example:
-
-```text
-Use Sosis to find the right ASO skill for keyword research on my app.
-Read my current metadata from Sosis, use any available Astro, Appfigures,
-Appeeky, or other ASO data MCP for live volume/difficulty/ranking evidence,
-then return a prioritized keyword report. Do not invent missing metrics and
-stop before making App Store Connect changes.
-```
-
 Cross-MCP orchestration happens in the host agent:
 
 ```text
@@ -230,13 +217,9 @@ External ASO MCP ───── live keyword, ranking, competitor, and chart ev
 Host agent model ───── analysis, synthesis, and copy generation
 ```
 
-Sosis does not proxy or silently call another MCP server. The agent can combine tools from every MCP visible in the same session. If no live-data provider is connected, it must identify missing evidence instead of fabricating volume, difficulty, rank, or download estimates.
-
-Provider-specific signup, API-key, curl, or ASC-sync directions inside the upstream skills are overridden by Sosis integration rules. ASC credentials remain local unless the user separately and explicitly chooses another service.
+Sosis does not proxy or silently call another MCP server. If no live-data provider is connected, the agent must identify missing evidence instead of fabricating volume, difficulty, rank, or download estimates.
 
 ## Agent-owned localization
-
-Sosis deliberately separates language generation from App Store writes:
 
 1. `get_localization_context` returns current values, locales, and field rules.
 2. The host agent drafts the copy using its own model.
@@ -245,13 +228,9 @@ Sosis deliberately separates language generation from App Store writes:
 5. The user reviews the entire batch.
 6. `apply_localization_batch` snapshots, writes, and verifies each locale.
 
-Nothing is written during the context, validation, or planning steps.
-
 To recover exact metadata that still exists in App Store Connect, use `plan_copy_localizations_from_version` instead of asking the model to recreate it.
 
 ## Screenshot workflow
-
-Sosis supports agent-created or manually captured screenshots without needing an embedded image model:
 
 1. `get_screenshot_context` returns locales, display types, existing sets, and expected directory layouts.
 2. The agent or user creates image files locally.
@@ -272,13 +251,7 @@ screenshots/
       02-editor.png
 ```
 
-Replacing existing screenshots requires both `confirmed: true` and the exact phrase:
-
-```text
-REPLACE SCREENSHOTS <versionId>
-```
-
-Before deleting the first asset, Sosis downloads and checksums **every** affected screenshot. Each backup can later be restored with its previous order.
+Replacing existing screenshots requires both `confirmed: true` and the exact phrase `REPLACE SCREENSHOTS <versionId>`. Before deleting the first asset, Sosis downloads and checksums **every** affected screenshot.
 
 ## Safety and recovery
 
@@ -290,7 +263,8 @@ Before deleting the first asset, Sosis downloads and checksums **every** affecte
 | Screenshot deletion/replacement | Download, Apple-host allowlist, image validation, size limit, SHA-256 checksum | Restore bytes and previous order |
 | Version/subscription localization deletion | Record metadata before delete | Recreate and verify localization |
 | App Preview deletion | Blocked | No false recovery promise |
-| Full subscription deletion | Hidden from web; exact resource-bound MCP confirmation | Irreversible |
+| Full subscription deletion | Exact resource-bound MCP confirmation | Irreversible |
+| Local account removal | CLI `--yes` or `REMOVE ACCOUNT <accountId>` | Re-add the `.p8` |
 
 Additional rules:
 
@@ -299,22 +273,21 @@ Additional rules:
 - Plans expire after 24 hours.
 - A plan is rejected if App Store Connect changed after planning.
 - Restore refuses to overwrite newer remote values unless the conflict is explicitly reviewed and forced.
-- A restore creates another safety snapshot whenever the remote resource supports it.
 - Reviews and other ASC strings are treated as untrusted data, never as agent instructions.
 
 ## Local security model
 
 Sosis is intentionally designed for one local macOS user.
 
-- The MCP server uses stdio and does not expose a hosted MCP endpoint.
-- The optional web server binds to `127.0.0.1` and rejects non-local Host, cross-site, and mismatched Origin requests.
+- The MCP server uses stdio and does not expose a hosted MCP or HTTP endpoint.
+- Add API keys with the CLI so the private key is read from a local file, not from chat.
 - ASC `.p8` keys are AES-256-GCM encrypted under `~/.sosis/credentials/`.
 - The random 32-byte encryption master key lives in macOS login Keychain under `com.sosis.master-key.v1`.
 - `accounts.json` contains public account metadata only.
 - App Review demo credentials are redacted from normal plans, snapshots, errors, logs, and MCP output.
 - JWTs are short-lived and cached against the credential version.
 
-This protects credentials at rest and avoids a remote Sosis breach surface. It does not protect against malware or a compromised agent running as the same macOS user. Use FileVault, a strong macOS login password, trusted agent clients, and least-privilege ASC keys.
+This protects credentials at rest and avoids a remote Sosis breach surface. It does not protect against malware or a compromised agent running as the same macOS user.
 
 ## Local data
 
@@ -322,7 +295,7 @@ This protects credentials at rest and avoids a remote Sosis breach surface. It d
 ~/.sosis/
   accounts.json             # public ASC account metadata
   credentials/              # encrypted .p8 envelopes
-  config.json
+  config.json               # leftover from older dashboard installs; unused
   changes/
     plans/                  # 24-hour change plans
     snapshots/              # before/after audit and restore records
@@ -336,37 +309,13 @@ macOS login Keychain
   com.sosis.master-key.v1   # local encryption master key
 ```
 
-Back up `~/.sosis/` using an encrypted machine backup. Copying only the encrypted credential files to another Mac is intentionally insufficient without the matching Keychain master key.
-
-## Optional visual dashboard
-
-Development mode:
-
-```bash
-npm run dev
-```
-
-Persistent local installation:
-
-```bash
-npm run setup
-```
-
-`npm run setup` creates a local `launchd` service and opens the dashboard at `http://127.0.0.1:3737`. The dashboard is useful for:
-
-- initial account setup;
-- browsing App Store state visually;
-- reviewing protected change history;
-- restoring snapshots and deletion backups.
-
-The MCP server remains independent from this service.
+If you previously installed the optional dashboard as a login service, remove it with `npm run uninstall`. That command does not delete `~/.sosis/`.
 
 ## MCP tool groups
 
-The tool surface is organized around workflows rather than raw API endpoints:
-
-- **Discovery:** accounts, apps, versions, builds, localizations, reviews.
-- **ASO intelligence:** skill routing and methodologies for keyword, metadata, competitors, creative, reviews, growth, and market analysis.
+- **Accounts:** list, add from a `.p8` path, remove.
+- **Discovery:** apps, versions, builds, localizations, reviews.
+- **ASO intelligence:** skill routing and methodologies.
 - **Localization:** context, validation, single/batch plans, older-version copy, apply, restore.
 - **Protected text:** App Info, subscriptions, TestFlight, App Review.
 - **Release:** version creation, build attachment, readiness, submission, release, phased release.
@@ -375,33 +324,26 @@ The tool surface is organized around workflows rather than raw API endpoints:
 - **Media:** screenshot context/planning/upload/order/backup and App Preview upload.
 - **Recovery:** change snapshots, deletion backups, verified restore.
 
-Run the server manually only for protocol debugging:
-
-```bash
-npm run mcp
-```
-
-Normally the MCP client starts and stops this command itself.
+Normally the MCP client starts and stops `npm run mcp` itself.
 
 ## Development
 
 ```bash
-npm run dev          # optional Next.js dashboard
-npm run mcp          # stdio MCP server
-npm run mcp:doctor   # local installation diagnostics
-npm test             # Node test suite
-npm run lint         # ESLint
-npx tsc --noEmit     # TypeScript check
-npm run build        # production dashboard build
+npm run sosis -- help   # local CLI
+npm run mcp             # stdio MCP server
+npm run mcp:doctor      # local installation diagnostics
+npm test                # Node test suite
+npm run lint            # ESLint
+npx tsc --noEmit        # TypeScript check
 ```
 
 Before opening a pull request:
 
 ```bash
-npm test && npm run lint && npx tsc --noEmit && npm run build
+npm test && npm run lint && npx tsc --noEmit
 ```
 
-Tests cover protected plans, stale conflicts, ambiguous accepted writes, batch localization, encrypted credentials, Keychain command safety, secret redaction, screenshot checksums/order, deletion backups, and idempotent recovery.
+See [Contributing](CONTRIBUTING.md) and [Security](SECURITY.md).
 
 ## Known boundaries
 
@@ -414,6 +356,7 @@ Tests cover protected plans, stale conflicts, ambiguous accepted writes, batch l
 ## Documentation
 
 - [Agent integration guide](docs/agent-integrations.md)
+- [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [OpenAI Codex MCP documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
 - [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp)

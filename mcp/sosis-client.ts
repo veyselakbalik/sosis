@@ -3,17 +3,35 @@ import path from "node:path";
 import { ascRequest } from "../src/lib/asc/client.js";
 import { uploadAppPreview, uploadAppScreenshot } from "../src/lib/asc/upload.js";
 import { loadDataPayload, publicView } from "../src/lib/storage/accounts-file.js";
+import {
+  addAccountFromP8File,
+  removeAccountById,
+} from "../src/lib/storage/account-setup.js";
 
 /**
  * Local Sosis core adapter for the MCP server.
  *
- * ASC requests, account reads and uploads go directly through shared local
- * modules, so the MCP server does not require the optional Next.js app.
+ * ASC requests, account setup and uploads go directly through shared local
+ * modules. Credentials are read from disk by this process; tool results never
+ * include .p8 contents.
  */
 
 export async function sosisListAccounts() {
   const { accounts } = await loadDataPayload();
   return accounts.map(publicView);
+}
+
+export async function sosisAddAccount(input: {
+  label: string;
+  issuerId: string;
+  keyId: string;
+  p8Path: string;
+}) {
+  return addAccountFromP8File(input);
+}
+
+export async function sosisRemoveAccount(accountId: string) {
+  return removeAccountById(accountId);
 }
 
 export async function sosisAscGet<T>(accountId: string, ascPath: string): Promise<T> {
