@@ -1,0 +1,8 @@
+{
+  "name": "aso-skills",
+  "repository": "https://github.com/Eronred/aso-skills",
+  "commit": "f97c943d44481dd3e29e2deaf672fc3c7ee83fa9",
+  "license": "MIT",
+  "vendoredAt": "2026-08-14",
+  "scope": "skills/*/SKILL.md"
+}

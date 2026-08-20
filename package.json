@@ -1,0 +1,56 @@
+{
+  "name": "sosis",
+  "version": "0.1.0",
+  "description": "Local-first, agent-native App Store Connect MCP server with an optional visual dashboard.",
+  "keywords": [
+    "app-store-connect",
+    "mcp",
+    "ai-agents",
+    "ios",
+    "indie-dev",
+    "testflight",
+    "next.js"
+  ],
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --import tsx --test src/lib/core/*.test.ts src/lib/storage/*.test.ts src/lib/server/*.test.ts",
+    "lint": "eslint",
+    "setup": "next build && tsx scripts/install-launchd.ts && open http://localhost:3737",
+    "uninstall": "tsx scripts/uninstall-launchd.ts",
+    "mcp": "node --import tsx mcp/server.ts",
+    "mcp:doctor": "node --import tsx scripts/mcp-doctor.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@tanstack/react-query": "^5.100.10",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.16.0",
+    "next": "16.1.6",
+    "p-queue": "^9.3.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-dropzone": "^15.0.0",
+    "react-hook-form": "^7.76.0",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.1",
+    "typescript": "^5"
+  }
+}
